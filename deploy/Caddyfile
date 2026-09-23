@@ -1,0 +1,18 @@
+{$DOMAIN} {
+	encode zstd gzip
+
+	basic_auth {
+		{$AUTH_USER} {$AUTH_HASH}
+	}
+
+	reverse_proxy app:8000 {
+		flush_interval -1    # ne bufferise pas le streaming des réponses
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+}

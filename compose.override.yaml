@@ -1,9 +1,9 @@
-# Dev : code monté + rechargement auto, Ollama distant (celui du serveur, via .env).
+# Dev : code monté + rechargement auto.
+# Réseau de l'hôte pour joindre l'Ollama du serveur via le tunnel SSH sur 127.0.0.1:11434.
 services:
   app:
-    command: ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-    ports:
-      - "127.0.0.1:${PORT:-8000}:8000"
+    network_mode: host
+    command: ["uvicorn", "server:app", "--host", "127.0.0.1", "--port", "${PORT:-8000}", "--reload"]
     volumes:
       - ./server.py:/app/server.py
       - ./cerveau.py:/app/cerveau.py
