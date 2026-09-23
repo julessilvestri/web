@@ -18,27 +18,19 @@ docker compose up --build
 ```
 → http://localhost:8000  (`.env` : `OLLAMA_HOST=http://127.0.0.1:11434`)
 
-## Prod (Caddy HTTPS + mot de passe, Ollama local au serveur)
+## Prod (Caddy HTTPS + mot de passe, Ollama dans la stack)
 
-Dans `.env` sur le serveur : `DOMAIN`, `AUTH_USER`, `AUTH_HASH` (voir `.env.example`).
+Dans `.env` sur le serveur : `UID`/`GID` (commande `id`), `DOMAIN`, `AUTH_USER`, `AUTH_HASH` (voir `.env.example`).
 
 ```bash
+mkdir -p cerveau                                    # sinon Docker le crée en root
 docker run --rm -it caddy:2 caddy hash-password     # génère AUTH_HASH
 docker compose -f compose.yaml -f compose.prod.yaml up -d --build
 ```
 → https://srv852907.hstgr.cloud
 
-### Pare-feu du serveur
-
-Ollama doit écouter sur `0.0.0.0` (pour être joignable depuis Docker) mais **pas** depuis internet :
-
-```bash
-sudo ufw allow OpenSSH                                          # AVANT d'activer ufw
-sudo ufw allow from 172.16.0.0/12 to any port 11434 proto tcp   # conteneurs Docker → Ollama
-sudo ufw deny 11434
-sudo ufw enable
-```
-Les ports 80/443 de Caddy sont publiés par Docker (qui contourne ufw) : rien à ouvrir.
+Ollama n'est publié que sur `127.0.0.1:11434` du serveur (pour le tunnel SSH du dev),
+jamais sur internet. Ne jamais publier un port en `-p 11434:11434` : Docker contourne ufw.
 
 ## Outils en ligne de commande
 

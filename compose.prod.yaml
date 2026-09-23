@@ -1,12 +1,23 @@
-# Prod : Caddy (HTTPS + mot de passe) devant l'app, Ollama installé sur le serveur.
+# Prod : Caddy (HTTPS + mot de passe) devant l'app, Ollama dans la stack.
 services:
   app:
     restart: unless-stopped
+    depends_on: [ollama]
     environment:
-      OLLAMA_HOST: http://host.docker.internal:11434
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      OLLAMA_HOST: http://ollama:11434
     # Aucun port publié : seul Caddy est joignable depuis internet.
+
+  ollama:
+    image: ollama/ollama
+    restart: unless-stopped
+    environment:
+      OLLAMA_FLASH_ATTENTION: "1"
+      OLLAMA_KV_CACHE_TYPE: q8_0
+      OLLAMA_MAX_LOADED_MODELS: "2"
+    volumes:
+      - ollama:/root/.ollama    # volume existant : llama3.2 + nomic-embed-text
+    ports:
+      - "127.0.0.1:11434:11434" # serveur uniquement → tunnel SSH du dev
 
   caddy:
     image: caddy:2
@@ -26,5 +37,7 @@ services:
       - caddy_config:/config
 
 volumes:
+  ollama:
+    external: true              # créé par l'ancien `docker run … -v ollama:…`
   caddy_data:
   caddy_config:
