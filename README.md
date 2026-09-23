@@ -13,7 +13,7 @@ Modèles requis côté Ollama : `ollama pull llama3.2 && ollama pull nomic-embed
 ## Dev (Ollama du serveur via tunnel SSH, rechargement auto)
 
 ```bash
-ssh -N -L 11434:localhost:11434 root@srv852907.hstgr.cloud   # terminal à part
+ssh -N -L 11434:localhost:11434 jules@srv852907.hstgr.cloud   # terminal à part
 docker compose up --build
 ```
 → http://localhost:8000  (`.env` : `OLLAMA_HOST=http://127.0.0.1:11434`)
@@ -33,10 +33,10 @@ docker compose -f compose.yaml -f compose.prod.yaml up -d --build
 Ollama doit écouter sur `0.0.0.0` (pour être joignable depuis Docker) mais **pas** depuis internet :
 
 ```bash
-ufw allow OpenSSH                                          # AVANT d'activer ufw
-ufw allow from 172.16.0.0/12 to any port 11434 proto tcp   # conteneurs Docker → Ollama
-ufw deny 11434
-ufw enable
+sudo ufw allow OpenSSH                                          # AVANT d'activer ufw
+sudo ufw allow from 172.16.0.0/12 to any port 11434 proto tcp   # conteneurs Docker → Ollama
+sudo ufw deny 11434
+sudo ufw enable
 ```
 Les ports 80/443 de Caddy sont publiés par Docker (qui contourne ufw) : rien à ouvrir.
 
