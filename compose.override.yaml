@@ -1,0 +1,10 @@
+# Dev : code monté + rechargement auto, Ollama distant (celui du serveur, via .env).
+services:
+  app:
+    command: ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "127.0.0.1:${PORT:-8000}:8000"
+    volumes:
+      - ./server.py:/app/server.py
+      - ./cerveau.py:/app/cerveau.py
+      - ./public:/app/public

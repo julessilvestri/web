@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+.env
+# La mémoire est une donnée, pas du code (différente en dev et en prod)
+cerveau/

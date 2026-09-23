@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Chat Ollama — cerveau</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #E9EDF2;
+            --panel: #F7F9FB;
+            --ink: #1C2530;
+            --muted: #5E6B7A;
+            --line: #CFD7E1;
+            --accent: #2F55A4;
+            --accent-ink: #FFFFFF;
+            --user: #2F55A4;
+            --user-ink: #FFFFFF;
+            --error: #B3261E;
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #141A22;
+                --panel: #1C2430;
+                --ink: #E4E9F0;
+                --muted: #93A0B1;
+                --line: #2C3848;
+                --accent: #7EA2EC;
+                --accent-ink: #0F1620;
+                --user: #34518A;
+                --user-ink: #F2F5FA;
+                --error: #F2B8B5;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #141A22;
+            --panel: #1C2430;
+            --ink: #E4E9F0;
+            --muted: #93A0B1;
+            --line: #2C3848;
+            --accent: #7EA2EC;
+            --accent-ink: #0F1620;
+            --user: #34518A;
+            --user-ink: #F2F5FA;
+            --error: #F2B8B5;
+        }
+
+        *, *::before, *::after { box-sizing: inherit; }
+
+        html, body { height: 100%; margin: 0; }
+
+        html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font: 1rem/1.55 "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: .75rem 1.25rem;
+            padding: 1rem clamp(1rem, 4vw, 2rem);
+            border-bottom: 1px solid var(--line);
+        }
+
+        h1 {
+            font: 700 1.5rem/1 "Bricolage Grotesque", system-ui, sans-serif;
+            letter-spacing: -.02em;
+            margin: 0;
+            margin-right: auto;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            color: var(--muted);
+            font-size: .9rem;
+        }
+
+        .dot { width: .6rem; height: .6rem; border-radius: 50%; background: var(--muted); }
+        .dot.ok { background: #2E9E5B; }
+        .dot.ko { background: var(--error); }
+
+        .controls { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+        .actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+        label.field {
+            display: flex;
+            flex-direction: column;
+            font-size: .8rem;
+            color: var(--muted);
+            gap: .2rem;
+        }
+
+        input, select, textarea, button { font: inherit; color: inherit; }
+
+        input, select {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: .4rem;
+            padding: .35rem .5rem;
+            min-width: 0;
+        }
+
+        input#host { width: 13rem; }
+        select { min-width: 10rem; }
+
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem clamp(1rem, 4vw, 2rem);
+        }
+
+        .thread {
+            max-width: 46rem;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+        }
+
+        .empty { color: var(--muted); text-align: center; margin-top: 18vh; }
+
+        .empty strong {
+            display: block;
+            font: 700 1.75rem/1.2 "Bricolage Grotesque", sans-serif;
+            color: var(--ink);
+            margin-bottom: .4rem;
+        }
+
+        .msg { white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+
+        .msg.user {
+            align-self: flex-end;
+            max-width: 85%;
+            background: var(--user);
+            color: var(--user-ink);
+            padding: .6rem .9rem;
+            border-radius: 1rem 1rem .25rem 1rem;
+        }
+
+        .msg.assistant {
+            align-self: stretch;
+            padding-left: .9rem;
+            border-left: 3px solid var(--accent);
+        }
+
+        .msg.assistant.streaming::after {
+            content: "";
+            display: inline-block;
+            width: .55em;
+            height: 1.05em;
+            background: var(--accent);
+            vertical-align: text-bottom;
+            margin-left: 2px;
+            animation: blink 1s steps(1) infinite;
+        }
+
+        .msg.error { color: var(--error); border-left-color: var(--error); }
+
+        .msg.note {
+            align-self: center;
+            font-size: .85rem;
+            color: var(--muted);
+            border: 1px dashed var(--line);
+            border-radius: 999px;
+            padding: .25rem .8rem;
+        }
+
+        .meta { font-size: .8rem; color: var(--muted); margin-top: .35rem; white-space: normal; }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+        @media (prefers-reduced-motion: reduce) {
+            .msg.assistant.streaming::after { animation: none; }
+        }
+
+        footer {
+            border-top: 1px solid var(--line);
+            background: var(--panel);
+            padding: .9rem clamp(1rem, 4vw, 2rem);
+        }
+
+        form {
+            max-width: 46rem;
+            margin: 0 auto;
+            display: flex;
+            gap: .6rem;
+            align-items: flex-end;
+        }
+
+        textarea {
+            flex: 1;
+            resize: none;
+            max-height: 12rem;
+            min-height: 2.8rem;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: .6rem;
+            padding: .65rem .8rem;
+            line-height: 1.4;
+        }
+
+        button {
+            border: 0;
+            border-radius: .6rem;
+            padding: .7rem 1.1rem;
+            cursor: pointer;
+            background: var(--accent);
+            color: var(--accent-ink);
+            font-weight: 700;
+        }
+
+        button.secondary {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--line);
+            padding: .35rem .7rem;
+            font-weight: 400;
+        }
+
+        button:disabled { opacity: .5; cursor: not-allowed; }
+
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        .hint { max-width: 46rem; margin: .4rem auto 0; font-size: .8rem; color: var(--muted); }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Chat Ollama</h1>
+        <span class="status"><span class="dot" id="dot"></span><span id="statusText">Connexion…</span></span>
+        <div class="controls">
+            <label class="field">Serveur
+                <input id="host" value="" placeholder="(ce serveur)" spellcheck="false" autocomplete="off">
+            </label>
+            <label class="field">Modèle
+                <select id="model">
+                    <option value="llama3.2">llama3.2</option>
+                </select>
+            </label>
+        </div>
+        <div class="actions">
+            <button class="secondary" id="remember" type="button">🧠 Mémoriser</button>
+            <button class="secondary" id="clear" type="button">Nouvelle conversation</button>
+        </div>
+    </header>
+
+    <main id="scroller">
+        <div class="thread" id="thread">
+            <div class="empty" id="empty">
+                <strong>Pose ta première question</strong>
+                La réponse s'affiche mot à mot, avec la mémoire de ton cerveau.
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <form id="form">
+            <textarea id="input" rows="1" placeholder="Écris un message…" autofocus></textarea>
+            <button id="send" type="submit">Envoyer</button>
+        </form>
+        <p class="hint">Entrée pour envoyer · Maj+Entrée pour un saut de ligne · 🧠 Mémoriser enregistre la conversation dans le cerveau</p>
+    </footer>
+
+    <script src="js/main.js?v=3" defer></script>
+</body>
+
+</html>

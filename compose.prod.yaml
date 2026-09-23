@@ -1,0 +1,10 @@
+# Prod : utilise l'Ollama installé sur le serveur lui-même.
+services:
+  app:
+    restart: unless-stopped
+    environment:
+      OLLAMA_HOST: http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${PORT:-8000}:8000"    # derrière un reverse proxy ; mets "8000:8000" pour exposer directement

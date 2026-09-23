@@ -1,0 +1,12 @@
+# Base commune dev + prod.
+# Dev  : docker compose up            (charge aussi compose.override.yaml)
+# Prod : docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+services:
+  app:
+    build: .
+    image: cerveau-ollama
+    user: "${UID:-1000}:${GID:-1000}"     # les fichiers de cerveau/ restent à toi sur l'hôte
+    environment:
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://127.0.0.1:11434}
+    volumes:
+      - ./cerveau:/app/cerveau            # la mémoire vit hors de l'image
