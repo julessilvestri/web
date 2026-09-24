@@ -8,7 +8,7 @@ Chat web (FastAPI + JS) branché sur Ollama, avec une mémoire en Markdown dans 
 cp .env.example .env   # puis ajuste OLLAMA_HOST, UID, GID
 ```
 
-Modèles requis côté Ollama : `ollama pull llama3.2 && ollama pull nomic-embed-text`
+Modèles requis côté Ollama : `ollama pull llama3.2 && ollama pull qwen2.5:3b && ollama pull nomic-embed-text`
 
 ## Dev (Ollama du serveur via tunnel SSH, rechargement auto)
 

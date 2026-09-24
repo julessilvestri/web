@@ -21,7 +21,7 @@ import ollama
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
 CERVEAU = Path(os.environ.get("CERVEAU_DIR", Path(__file__).resolve().parent / "cerveau"))
 MODELE = "llama3.2"
-MODELE_CONSOLIDATION = "llama3.2"   # un modèle plus gros (ex. qwen2.5:7b) trie mieux, si la RAM suit
+MODELE_CONSOLIDATION = "qwen2.5:3b"  # suit mieux les consignes et le JSON que llama3.2
 MODELE_EMBED = "nomic-embed-text"
 TOP_K = 3                 # souvenirs injectés au maximum
 SEUIL = 0.5               # similarité minimale pour qu'un souvenir soit injecté
@@ -211,10 +211,10 @@ def consolider(historique):
         "Voici une conversation entre un utilisateur et son assistant.\n"
         f"Fiches de mémoire existantes : {', '.join(existants) or 'aucune'}.\n\n"
         "Réponds uniquement en JSON, au format :\n"
-        '{"important": true, "titre": "titre court", "resume": "2 ou 3 phrases", '
+        '{"titre": "titre court", "resume": "2 ou 3 phrases", '
         '"faits": [{"fiche": "nom-de-fiche", "fait": "phrase autonome"}]}\n\n'
         "Règles :\n"
-        "- important vaut false si rien ne mérite d'être retenu (tests, salutations, bavardage) ;\n"
+        "- faits vaut [] si rien ne mérite d'être retenu (tests, salutations, bavardage) ;\n"
         "- un fait est durable et compréhensible seul, ex. « L'utilisateur héberge Ollama sur un VPS » ;\n"
         "- réutilise une fiche existante si le sujet correspond, sinon crée un nom court en minuscules avec des tirets ;\n"
         "- 5 faits au maximum.\n\n"
@@ -226,7 +226,9 @@ def consolider(historique):
     except json.JSONDecodeError:
         print("Consolidation ignorée : JSON invalide.")
         return
-    if not data.get("important"):
+    # Pas de drapeau « important » : llama3.2 le mettait souvent à false tout en listant des faits
+    faits = data.get("faits") if isinstance(data, dict) else None
+    if not isinstance(faits, list) or not faits:
         print("Rien d'important à retenir.")
         return
 
@@ -240,9 +242,16 @@ def consolider(historique):
 
     # Mémoire sémantique : faits regroupés par fiche puis fusionnés
     par_fiche = {}
-    for item in data.get("faits", [])[:5]:
-        if isinstance(item, dict) and str(item.get("fait", "")).strip():
-            par_fiche.setdefault(slug(str(item.get("fiche", "divers"))), []).append(str(item["fait"]).strip())
+    for item in faits[:5]:
+        if not isinstance(item, dict):
+            continue
+        if "fait" not in item and len(item) == 1:
+            # qwen2.5 écrit parfois {"tendinite": "…"} au lieu de {"fiche": …, "fait": …}
+            (fiche, fait), = item.items()
+        else:
+            fiche, fait = item.get("fiche", "divers"), item.get("fait", "")
+        if str(fait).strip():
+            par_fiche.setdefault(slug(str(fiche)), []).append(str(fait).strip())
     for nom, faits in par_fiche.items():
         fusionner(CERVEAU / "01_semantique" / f"{nom}.md", faits)
     print(f"🧠 Mémorisé : {data.get('titre')} ({sum(map(len, par_fiche.values()))} faits).")
